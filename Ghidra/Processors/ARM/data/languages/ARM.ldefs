@@ -5,13 +5,31 @@
             endian="little"
             size="32"
             variant="v8"
-            version="1.102"
+            version="1.103"
             slafile="ARM8_le.sla"
             processorspec="ARMt.pspec"
             manualindexfile="../manuals/ARM.idx"
             id="ARM:LE:32:v8">
     <description>Generic ARM/Thumb v8 little endian</description>
     <compiler name="default" spec="ARM.cspec" id="default"/>
+    <compiler name="Visual Studio" spec="ARM_win.cspec" id="windows"/>
+    <external_name tool="gnu" name="iwmmxt"/>
+    <external_name tool="IDA-PRO" name="arm"/>
+    <external_name tool="DWARF.register.mapping.file" name="ARMneon.dwarf"/>
+  </language>
+  
+  <language processor="ARM"
+            endian="little"
+            size="32"
+            variant="v8T"
+            version="1.103"
+            slafile="ARM8_le.sla"
+            processorspec="ARMtTHUMB.pspec"
+            manualindexfile="../manuals/ARM.idx"
+            id="ARM:LE:32:v8T">
+    <description>Generic ARM/Thumb v8 little endian (Thumb is default)</description>
+    <compiler name="default" spec="ARM.cspec" id="default"/>
+    <compiler name="Visual Studio" spec="ARM_win.cspec" id="windows"/>
     <external_name tool="gnu" name="iwmmxt"/>
     <external_name tool="IDA-PRO" name="arm"/>
     <external_name tool="DWARF.register.mapping.file" name="ARMneon.dwarf"/>
@@ -22,7 +40,7 @@
             instructionEndian="little"
             size="32"
             variant="v8LEInstruction"
-            version="1.102"
+            version="1.103"
             slafile="ARM8_le.sla"
             processorspec="ARMt.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -37,7 +55,7 @@
             endian="big"
             size="32"
             variant="v8"
-            version="1.102"
+            version="1.103"
             slafile="ARM8_be.sla"
             processorspec="ARMt.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -50,17 +68,33 @@
   </language>
   
   <language processor="ARM"
+            endian="big"
+            size="32"
+            variant="v8T"
+            version="1.103"
+            slafile="ARM8_be.sla"
+            processorspec="ARMtTHUMB.pspec"
+            manualindexfile="../manuals/ARM.idx"
+            id="ARM:BE:32:v8T">
+    <description>Generic ARM/Thumb v8 big endian (Thumb is default)</description>
+    <compiler name="default" spec="ARM.cspec" id="default"/>
+    <external_name tool="gnu" name="iwmmxt"/>
+    <external_name tool="IDA-PRO" name="armb"/>
+    <external_name tool="DWARF.register.mapping.file" name="ARMneon.dwarf"/>
+  </language>
+  
+  <language processor="ARM"
             endian="little"
             size="32"
             variant="v7"
-            version="1.102"
+            version="1.103"
             slafile="ARM7_le.sla"
             processorspec="ARMt.pspec"
             manualindexfile="../manuals/ARM.idx"
             id="ARM:LE:32:v7">
     <description>Generic ARM/Thumb v7 little endian</description>
     <compiler name="default" spec="ARM.cspec" id="default"/>
-    <compiler name="Visual Studio" spec="ARM.cspec" id="windows"/>
+    <compiler name="Visual Studio" spec="ARM_win.cspec" id="windows"/>
     <external_name tool="gnu" name="iwmmxt"/>
     <external_name tool="IDA-PRO" name="arm"/>
     <external_name tool="DWARF.register.mapping.file" name="ARMneon.dwarf"/>
@@ -71,7 +105,7 @@
             instructionEndian="little"
             size="32"
             variant="v7LEInstruction"
-            version="1.102"
+            version="1.103"
             slafile="ARM7_le.sla"
             processorspec="ARMt.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -86,7 +120,7 @@
             endian="big"
             size="32"
             variant="v7"
-            version="1.102"
+            version="1.103"
             slafile="ARM7_be.sla"
             processorspec="ARMt.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -102,7 +136,7 @@
             endian="little"
             size="32"
             variant="Cortex"
-            version="1.102"
+            version="1.103"
             slafile="ARM7_le.sla"
             processorspec="ARMCortex.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -117,7 +151,7 @@
             endian="big"
             size="32"
             variant="Cortex"
-            version="1.102"
+            version="1.103"
             slafile="ARM7_be.sla"
             processorspec="ARMCortex.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -132,9 +166,9 @@
             endian="little"
             size="32"
             variant="v6"
-            version="1.102"
+            version="1.103"
             slafile="ARM6_le.sla"
-            processorspec="ARMt.pspec"
+            processorspec="ARMt_v6.pspec"
             manualindexfile="../manuals/ARM.idx"
             id="ARM:LE:32:v6">
     <description>Generic ARM/Thumb v6 little endian</description>
@@ -150,9 +184,9 @@
             endian="big"
             size="32"
             variant="v6"
-            version="1.102"
+            version="1.103"
             slafile="ARM6_be.sla"
-            processorspec="ARMt.pspec"
+            processorspec="ARMt_v6.pspec"
             manualindexfile="../manuals/ARM.idx"
             id="ARM:BE:32:v6">
     <description>Generic ARM/Thumb v6 big endian</description>
@@ -168,7 +202,7 @@
             endian="little"
             size="32"
             variant="v5t"
-            version="1.102"
+            version="1.103"
             slafile="ARM5t_le.sla"
             processorspec="ARMt_v45.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -184,7 +218,7 @@
             endian="big"
             size="32"
             variant="v5t"
-            version="1.102"
+            version="1.103"
             slafile="ARM5t_be.sla"
             processorspec="ARMt_v45.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -200,7 +234,7 @@
             endian="little"
             size="32"
             variant="v5"
-            version="1.102"
+            version="1.103"
             slafile="ARM5_le.sla"
             processorspec="ARM_v45.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -232,7 +266,7 @@
             endian="little"
             size="32"
             variant="v4t"
-            version="1.102"
+            version="1.103"
             slafile="ARM4t_le.sla"
             processorspec="ARMt_v45.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -248,7 +282,7 @@
             endian="big"
             size="32"
             variant="v4t"
-            version="1.102"
+            version="1.103"
             slafile="ARM4t_be.sla"
             processorspec="ARMt_v45.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -264,7 +298,7 @@
             endian="little"
             size="32"
             variant="v4"
-            version="1.102"
+            version="1.103"
             slafile="ARM4_le.sla"
             processorspec="ARM_v45.pspec"
             manualindexfile="../manuals/ARM.idx"
@@ -280,7 +314,7 @@
             endian="big"
             size="32"
             variant="v4"
-            version="1.102"
+            version="1.103"
             slafile="ARM4_be.sla"
             processorspec="ARM_v45.pspec"
             manualindexfile="../manuals/ARM.idx"

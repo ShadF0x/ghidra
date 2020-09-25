@@ -71,7 +71,6 @@ public class FunctionPlugin extends Plugin implements DataService {
 
 	public final static String FUNCTION_SUBGROUP_BEGINNING = "A_Beginning";
 	public final static String FUNCTION_SUBGROUP_MIDDLE = "M_Middle";
-	public final static String FUNCTION_SUBGROUP_END = "Z_End";
 
 	public static final String SET_DATA_TYPE_PULLRIGHT = "Set Data Type";
 
@@ -388,23 +387,7 @@ public class FunctionPlugin extends Plugin implements DataService {
 			Address loc = location.getAddress();
 			return program.getFunctionManager().getFunctionsOverlapping(new AddressSet(loc, loc));
 		}
-		//return an empty iterator....
-		return new Iterator<Function>() {
-			@Override
-			public void remove() {
-				// not supported
-			}
-
-			@Override
-			public boolean hasNext() {
-				return false;
-			}
-
-			@Override
-			public Function next() {
-				return null;
-			}
-		};
+		return Collections.emptyIterator();
 	}
 
 	Function getFunction(ListingActionContext context) {
@@ -580,8 +563,8 @@ public class FunctionPlugin extends Plugin implements DataService {
 		catch (VariableSizeException e) {
 			tool.setStatusInfo(e.getMessage());
 			if (e.canForce() && promptForConflictRemoval) {
-				String msg = variable.getName() + " size change resulted in \n" + e.getMessage() +
-					"\n \nDelete conflicting " + varType + "(s)";
+				String msg = varType + " " + variable.getName() + " size change resulted in \n" +
+					e.getMessage() + "\n \nDelete conflicting " + varType + "(s)";
 				if (OptionDialog.YES_OPTION == OptionDialog.showYesNoDialog(tool.getActiveWindow(),
 					varType + " Conflict", msg)) {
 					tool.setStatusInfo("");

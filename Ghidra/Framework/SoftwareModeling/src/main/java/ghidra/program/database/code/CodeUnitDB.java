@@ -17,8 +17,9 @@ package ghidra.program.database.code;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ConcurrentModificationException;
-import java.util.Iterator;
+import java.util.*;
+
+import org.apache.commons.lang3.StringUtils;
 
 import db.Record;
 import ghidra.program.database.*;
@@ -512,7 +513,7 @@ abstract class CodeUnitDB extends DatabaseObject implements CodeUnit, ProcessorC
 
 	@Override
 	public void setCommentAsArray(int commentType, String[] comment) {
-		setComment(commentType, StringUtilities.convertStringArray(comment));
+		setComment(commentType, StringUtils.join(comment, '\n'));
 	}
 
 	@Override
@@ -751,7 +752,7 @@ abstract class CodeUnitDB extends DatabaseObject implements CodeUnit, ProcessorC
 	}
 
 	@Override
-	public Register[] getRegisters() {
+	public List<Register> getRegisters() {
 		return programContext.getRegisters();
 	}
 

@@ -1,16 +1,20 @@
+apply from: "$rootProject.projectDir/gradle/javaProject.gradle"
+apply from: "$rootProject.projectDir/gradle/jacocoProject.gradle"
+apply from: "$rootProject.projectDir/gradle/javaTestProject.gradle"
+apply from: "$rootProject.projectDir/gradle/nativeProject.gradle"
+apply from: "$rootProject.projectDir/gradle/helpProject.gradle"
+apply from: "$rootProject.projectDir/gradle/distributableGhidraModule.gradle"
 apply plugin: 'eclipse'
+
 eclipse.project.name = 'Features Decompiler'
 
-apply from: "$rootProject.projectDir/gradleScripts/nativeBuildProperties.gradle"
-apply from: "$rootProject.projectDir/gradleScripts/buildHelp.gradle"
-apply from: "$rootProject.projectDir/gradleScripts/ghidraScripts.gradle"
+
 
 dependencies {
 	compile project(':Base')
 	compile project(':SoftwareModeling')
-	
 	// include Base src/test/resources when running decompiler integration tests (uses defaultTools)
-	integrationTestRuntime project(':Base').sourceSets.test.output
+	integrationTestRuntime project(path: ':Base', configuration: 'testArtifacts')
 	testCompile "org.jmockit:jmockit:1.44"
 	
     helpPath project(path: ":Base", configuration: 'helpPath')
@@ -60,9 +64,122 @@ task yaccSleigh {
 	ext.headerDir = file("build/generated/sleighlex")  
 }
 
-// Relative to the 'workingDir' Exec task property.
-def installPoint = "../../../../../Configurations/Public_Release/src/global/docs/languages" 
-def buildDir = "../../../build"
+def buildDir = "../../../build" // Relative to the 'workingDir' Exec task property.
+
+def installPoint = "$rootDir/GhidraDocs/languages/html"
+
+def installHelpPoint = "../help/help"
+
+task buildDecompilerHelpHtml(type: Exec) {
+
+	workingDir 'src/main/doc'
+
+	// 'which' returns the number of failed arguments
+	// Using the 'which' command first will allow the task to fail if the required
+	// executables are not installed.
+	//
+	// The bash commands end with "2>&1" to redirect stderr to stdout and have all
+	// messages print in sequence
+	//
+	// 'commandLine' takes one command, so wrap multiple commands in bash.
+	commandLine 'bash', '-e', '-c', """
+		echo '** Checking if required executables are installed. **'
+		which xsltproc
+		which sed
+
+		echo '** Removing older html files installed under '$installHelpPoint' **'
+		rm -f $installHelpPoint/topics/DecompilePlugin/*.html
+
+		echo '** Building html files **'
+		xsltproc --output $buildDir/decomp_noscaling.xml --stringparam profile.condition "noscaling" /usr/share/sgml/docbook/xsl-stylesheets/profiling/profile.xsl decompileplugin.xml 2>&1
+		xsltproc --stringparam base.dir ${installHelpPoint}/topics/DecompilePlugin/ --stringparam root.filename Decompiler decompileplugin_html.xsl $buildDir/decomp_noscaling.xml 2>&1
+		rm ${installHelpPoint}/topics/DecompilePlugin/Decompiler.html
+		sed -i -e '/Frontpage.css/ { p; s/Frontpage.css/languages.css/; }' ${installHelpPoint}/topics/DecompilePlugin/*.html 2>&1
+
+		echo '** Done. **'
+		"""
+
+	// Allows doLast block regardless of exit value.
+	ignoreExitValue true
+
+	// Store the output instead of printing to the console.
+	standardOutput = new ByteArrayOutputStream()
+	ext.output = { standardOutput.toString() }
+	ext.errorOutput = { standardOutput.toString() }
+
+	// Check the OS before executing command.
+	doFirst {
+		if (!getCurrentPlatformName().startsWith("linux")) {
+			throw new TaskExecutionException( it, new Exception("The '$it.name' task only works on Linux."))
+		}
+	}
+
+	// Print the output of the commands and check the return value.
+	doLast {
+		println output()
+		if (execResult.exitValue) {
+			logger.error("$it.name: An error occurred. Here is the output:\n" + output())
+			throw new TaskExecutionException( it, new Exception("'$it.name': The command: '${commandLine.join(' ')}'" +
+				" task \nfailed with exit code $execResult.exitValue; see task output for details."))
+		}
+	}
+}
+
+task buildDecompilerHelpPdf(type: Exec) {
+	// Check the OS before enabling task.
+	if (!(org.gradle.internal.os.OperatingSystem.current().isLinux() 
+		|| org.gradle.internal.os.OperatingSystem.current().isMacOsX())) {
+			it.enabled = false
+	}
+
+	workingDir 'src/main/doc'
+
+	// 'which' returns the number of failed arguments
+	// Using 'which' first will allow the entire command to fail if the required 
+	// executables are not installed.
+	//
+	// The bash commands end with "2>&1" to redirect stderr to stdout and have all 
+	// messages print in sequence
+	//
+	// 'commandLine' takes one command, so wrap multiple commands in bash.
+	commandLine 'bash', '-e', '-c', """
+		echo '** Checking if required executables are installed. **'
+		which fop 2>&1
+		which xsltproc 2>&1
+		rm -f decompileplugin.fo decompileplugin.pdf decompileplugin_withscaling.xml 2>&1
+		rm -rf ./images 2>&1
+		mkdir -p ./images 2>&1
+		cp $installHelpPoint/topics/DecompilePlugin/images/*.png ./images 2>&1
+		cp $installHelpPoint/topics/DecompilePlugin/images/*.gif ./images 2>&1
+		cp $installHelpPoint/shared/*.png ./images 2>&1
+
+		echo '** Building decompileplugin.fo **'
+		xsltproc --output ./decompileplugin_withscaling.xml --stringparam profile.condition "withscaling" /usr/share/sgml/docbook/xsl-stylesheets/profiling/profile.xsl decompileplugin.xml 2>&1
+		xsltproc --output ./decompileplugin.fo decompileplugin_pdf.xsl decompileplugin_withscaling.xml 2>&1
+
+		echo '** Building decompileplugin.pdf **'
+		fop decompileplugin.fo decompileplugin.pdf 2>&1
+
+		echo '** Done. **'
+		"""
+
+	// Allows doLast block regardless of exit value. Task does not fail if bash command fails. 
+	ignoreExitValue true
+
+	// Store the output instead of printing to the console.
+	standardOutput = new ByteArrayOutputStream()
+	ext.output = { standardOutput.toString() }
+	ext.errorOutput = { standardOutput.toString() }
+
+	// Print the output of the commands and check the return value.
+	doLast {
+		println output()
+		if (execResult.exitValue) {
+			println "$it.name: An error occurred with this task. Here is the output:\n" + output()
+			println "Skipping task $it.name\n"
+		}
+	}
+}
 
 /**
  * Build the pdfs docs for the decompiler and place them in the '$buildDir' directory.
@@ -72,11 +189,9 @@ def buildDir = "../../../build"
  * There is an associated, auto-generated clean task.
  */
 task buildDecompilerDocumentationPdfs(type: Exec) {
-
 	// Check the OS before enabling task.
 	if (!(org.gradle.internal.os.OperatingSystem.current().isLinux() 
 		|| org.gradle.internal.os.OperatingSystem.current().isMacOsX())) {
-			println "The '$it.name' task only works on Linux or Mac Os X and is therefore disabled."
 			it.enabled = false
 	}
 
@@ -102,7 +217,7 @@ task buildDecompilerDocumentationPdfs(type: Exec) {
 		which fop 2>&1
 		which xsltproc 2>&1
 		mkdir -p $buildDir 2>&1
-		cp $installPoint/html/Diagram*.png $buildDir 2>&1
+		cp $installPoint/Diagram*.png $buildDir 2>&1
 
 		echo '** Building sleigh.fo **'
 		xsltproc --output $buildDir/sleigh.fo sleigh_pdf.xsl sleigh.xml 2>&1
@@ -174,11 +289,11 @@ task buildDecompilerDocumentationHtml(type: Exec) {
 		echo '** Building html/sleigh.html **'
 		xsltproc --stringparam base.dir $buildDir/html/ --stringparam root.filename sleigh sleigh_html.xsl sleigh.xml 2>&1
 		sed -i -e '/Frontpage.css/ { p; s/Frontpage.css/languages.css/; }' $buildDir/html/sleigh*.html
-		cp $installPoint/html/Frontpage.css $buildDir/html 2>&1
-		cp $installPoint/html/languages.css $buildDir/html
-		cp $installPoint/html/Diagram1.png $buildDir/html
-		cp $installPoint/html/Diagram2.png $buildDir/html
-		cp $installPoint/html/Diagram3.png $buildDir/html
+		cp $installPoint/Frontpage.css $buildDir/html 2>&1
+		cp $installPoint/languages.css $buildDir/html
+		cp $installPoint/Diagram1.png $buildDir/html
+		cp $installPoint/Diagram2.png $buildDir/html
+		cp $installPoint/Diagram3.png $buildDir/html
 
 		echo '** Building html/pcoderef.html **'
 		xsltproc --stringparam base.dir $buildDir/html/ --stringparam root.filename pcoderef pcoderef_html.xsl pcoderef.xml  2>&1
@@ -186,13 +301,13 @@ task buildDecompilerDocumentationHtml(type: Exec) {
 		sed -i -e '/Frontpage.css/ { p; s/Frontpage.css/languages.css/; }' $buildDir/html/pcodedescription.html
 		sed -i -e '/Frontpage.css/ { p; s/Frontpage.css/languages.css/; }' $buildDir/html/pseudo-ops.html
 		sed -i -e '/Frontpage.css/ { p; s/Frontpage.css/languages.css/; }' $buildDir/html/reference.html
-		cp $installPoint/html/Frontpage.css $buildDir/html
-		cp $installPoint/html/languages.css $buildDir/html
+		cp $installPoint/Frontpage.css $buildDir/html
+		cp $installPoint/languages.css $buildDir/html
 
 		echo '** Installing html documentation. **'
 		cp $buildDir/index.html $installPoint/index.html
-		rm $installPoint/html/*.html $installPoint/html/*.png
-		cp $buildDir/html/*.html $buildDir/html/*.png $installPoint/html
+		rm $installPoint/*.html $installPoint/*.png
+		cp $buildDir/html/*.html $buildDir/html/*.png $installPoint/
 		echo '** Done. **'
 		"""
 
@@ -268,6 +383,7 @@ model {
 		                include "database.cc"
 		                include "cpool.cc"
 		                include "comment.cc"
+						include "stringmanage.cc"
 		                include "fspec.cc"
 		                include "action.cc"
 		                include "loadimage.cc"
@@ -292,6 +408,7 @@ model {
 		                include "rangeutil.cc"
 		                include "ruleaction.cc"
 		                include "subflow.cc"
+		                include "transform.cc"
 		                include "blockaction.cc"
 		                include "merge.cc"
 		                include "double.cc"
@@ -317,6 +434,7 @@ model {
 		                include "cpool_ghidra.cc"
 		                include "ghidra_process.cc"
 		                include "comment_ghidra.cc"
+						include "string_ghidra.cc"
 		         //       include "callgraph.cc"			// uncomment for debug
 		         //       include "ifacedecomp.cc"		// uncomment for debug
 		         //       include "ifaceterm.cc"			// uncomment for debug
@@ -410,7 +528,8 @@ model {
 				b.cppCompiler.define "_SECURE_SCL=0"
 				b.cppCompiler.define "_HAS_ITERATOR_DEBUGGING=0"
 				// b.cppCompiler.args "/Zi"		// for DEBUG, uncomment this line
-				// b.linker.args "/DEBUG"          // for DEBUG, uncomment this line
+				// b.cppCompiler.args "/FS"		// for DEBUG, uncomment this line
+				// b.linker.args "/DEBUG"		// for DEBUG, uncomment this line
 				if (b.targetPlatform.operatingSystem.windows) {
 					b.cppCompiler.define "WINDOWS"
 					b.cppCompiler.define "_WINDOWS"
@@ -510,4 +629,24 @@ Task createLexTask(String filename, String binaryName) {
 	}
 }
 
+rootProject.createInstallationZip {
+	dependsOn buildDecompilerDocumentationPdfs
+	
+	
+	def decompilerPdfZipPath = rootProject.ext.ZIP_DIR_PREFIX + "/docs/languages/"
 
+	// Add decompiler pdf files to zip. If the pdf files do not exist during execution time 
+	// (if there was an error or wrong platform), the zip task will move on.
+	buildDecompilerDocumentationPdfs.outputs.each { output ->
+		output.files.each { file ->
+			if (file.name.endsWith("pdf")) {
+				logger.debug("$project.name: Adding Decompiler documentation (if it exists) $file.name to $decompilerPdfZipPath")
+				rootProject.createInstallationZip.from (file) {
+					into {
+						decompilerPdfZipPath
+					}
+				}
+			}
+		}
+	}
+}

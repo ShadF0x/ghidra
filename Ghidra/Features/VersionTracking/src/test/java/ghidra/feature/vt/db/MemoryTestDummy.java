@@ -15,9 +15,12 @@
  */
 package ghidra.feature.vt.db;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 import ghidra.framework.store.LockException;
+import ghidra.program.database.mem.*;
 import ghidra.program.model.address.*;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.*;
@@ -37,14 +40,15 @@ public class MemoryTestDummy extends AddressSet implements Memory {
 	}
 
 	@Override
-	public MemoryBlock convertToUninitialized(MemoryBlock initializedBlock) throws LockException,
-			MemoryBlockException, NotFoundException {
+	public MemoryBlock convertToUninitialized(MemoryBlock initializedBlock)
+			throws LockException, MemoryBlockException, NotFoundException {
 		return null;
 	}
 
 	@Override
 	public MemoryBlock createBitMappedBlock(String name, Address start, Address mappedAddress,
-			long length) throws LockException, MemoryConflictException, AddressOverflowException {
+			long length, boolean overlay)
+			throws LockException, MemoryConflictException, AddressOverflowException {
 		return null;
 	}
 
@@ -56,23 +60,25 @@ public class MemoryTestDummy extends AddressSet implements Memory {
 
 	@Override
 	public MemoryBlock createByteMappedBlock(String name, Address start, Address mappedAddress,
-			long length) throws LockException, MemoryConflictException, AddressOverflowException {
+			long length, ByteMappingScheme byteMappingScheme, boolean overlay)
+			throws LockException, MemoryConflictException, AddressOverflowException,
+			IllegalArgumentException {
 		return null;
 	}
 
 	@Override
 	public MemoryBlock createInitializedBlock(String name, Address start, InputStream is,
-			long length, TaskMonitor monitor, boolean overlay) throws LockException,
-			MemoryConflictException, AddressOverflowException, CancelledException,
-			DuplicateNameException {
+			long length, TaskMonitor monitor, boolean overlay)
+			throws LockException, MemoryConflictException, AddressOverflowException,
+			CancelledException, DuplicateNameException {
 		return null;
 	}
 
 	@Override
 	public MemoryBlock createInitializedBlock(String name, Address start, long size,
-			byte initialValue, TaskMonitor monitor, boolean overlay) throws LockException,
-			DuplicateNameException, MemoryConflictException, AddressOverflowException,
-			CancelledException {
+			byte initialValue, TaskMonitor monitor, boolean overlay)
+			throws LockException, DuplicateNameException, MemoryConflictException,
+			AddressOverflowException, CancelledException {
 		return null;
 	}
 
@@ -248,8 +254,8 @@ public class MemoryTestDummy extends AddressSet implements Memory {
 	}
 
 	@Override
-	public MemoryBlock join(MemoryBlock blockOne, MemoryBlock blockTwo) throws LockException,
-			MemoryBlockException, NotFoundException {
+	public MemoryBlock join(MemoryBlock blockOne, MemoryBlock blockTwo)
+			throws LockException, MemoryBlockException, NotFoundException {
 		return null;
 	}
 
@@ -312,14 +318,42 @@ public class MemoryTestDummy extends AddressSet implements Memory {
 	}
 
 	@Override
-	public void setShort(Address addr, short value, boolean bigEndian) throws MemoryAccessException {
+	public void setShort(Address addr, short value, boolean bigEndian)
+			throws MemoryAccessException {
 		// no op
 	}
 
 	@Override
-	public void split(MemoryBlock block, Address addr) throws MemoryBlockException, LockException,
-			NotFoundException {
+	public void split(MemoryBlock block, Address addr)
+			throws MemoryBlockException, LockException, NotFoundException {
 		// no op
 	}
 
+	@Override
+	public FileBytes createFileBytes(String filename, long offset, long size, InputStream is,
+			TaskMonitor monitor) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public List<FileBytes> getAllFileBytes() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public boolean deleteFileBytes(FileBytes descriptor) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public MemoryBlock createInitializedBlock(String name, Address start, FileBytes fileBytes,
+			long offset, long size, boolean overlay) throws LockException, DuplicateNameException,
+			MemoryConflictException, AddressOverflowException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public AddressSourceInfo getAddressSourceInfo(Address address) {
+		throw new UnsupportedOperationException();
+	}
 }

@@ -354,6 +354,46 @@ int4 FlowBlock::calcDepth(const FlowBlock *leaf) const
   return depth;
 }
 
+/// Return \b true if \b this block \e dominates the given block (or is equal to it).
+/// This assumes that block indices have been set with a reverse post order so that having a
+/// smaller index is a necessary condition for dominance.
+/// \param subBlock is the given block to test against \b this for dominance
+/// \return \b true if \b this dominates
+bool FlowBlock::dominates(const FlowBlock *subBlock) const
+
+{
+  while(subBlock != (const FlowBlock *)0 && index <= subBlock->index) {
+    if (subBlock == this) return true;
+    subBlock = subBlock->getImmedDom();
+  }
+  return false;
+}
+
+/// \brief Check if the condition from the given block holds for \b this block
+///
+/// We assume the given block has 2 out-edges and that \b this block is immediately reached by
+/// one of these two edges. Some condition holds when traversing the out-edge to \b this, and the complement
+/// of the condition holds for traversing the other out-edge. We verify that the condition holds for
+/// this entire block.  More specifically, we check that that there is no path to \b this through the
+/// sibling edge, where the complement of the condition holds (unless we loop back through the conditional block).
+/// \param cond is the conditional block with 2 out-edges
+/// \return \b true if the condition holds for this block
+bool FlowBlock::restrictedByConditional(const FlowBlock *cond) const
+
+{
+  if (sizeIn() == 1) return true;	// Its impossible for any path to come through sibling to this
+  if (getImmedDom() != cond) return false;	// This is not dominated by conditional block at all
+  for(int4 i=0;i<sizeIn();++i) {
+    const FlowBlock *inBlock = getIn(i);
+    if (inBlock == cond) continue;	// The unique edge from cond to this
+    while(inBlock != this) {
+      if (inBlock == cond) return false;	// Must have come through sibling
+      inBlock = inBlock->getImmedDom();
+    }
+  }
+  return true;
+}
+
 /// \return \b true if \b this is the top of a loop
 bool FlowBlock::hasLoopIn(void) const
 
@@ -703,6 +743,42 @@ FlowBlock *FlowBlock::findCommonBlock(FlowBlock *bl1,FlowBlock *bl2)
     bl2 = bl2->getImmedDom();
   }
   return common;
+}
+
+/// Find the most immediate dominating FlowBlock of all blocks in the given set.
+/// The container must not be empty.
+/// \param blockSet is the given set of blocks
+/// \return the most immediate dominating FlowBlock
+FlowBlock *FlowBlock::findCommonBlock(const vector<FlowBlock *> &blockSet)
+
+{
+  vector<FlowBlock *> markedSet;
+  FlowBlock *bl;
+  FlowBlock *res = blockSet[0];
+  int4 bestIndex = res->getIndex();
+  bl = res;
+  do {
+    bl->setMark();
+    markedSet.push_back(bl);
+    bl = bl->getImmedDom();
+  } while (bl != (FlowBlock *)0);
+  for(int4 i=1;i<blockSet.size();++i) {
+    if (bestIndex == 0)
+      break;
+    bl = blockSet[i];
+    while(!bl->isMark()) {
+      bl->setMark();
+      markedSet.push_back(bl);
+      bl = bl->getImmedDom();
+    }
+    if (bl->getIndex() < bestIndex) {	// If first meeting with old paths is higher than ever before
+      res = bl;				// we have a new best
+      bestIndex = res->getIndex();
+    }
+  }
+  for(int4 i=0;i<markedSet.size();++i)
+    markedSet[i]->clearMark();
+  return res;
 }
 
 /// Add the given FlowBlock to the list and make \b this the parent
@@ -1178,12 +1254,13 @@ FlowBlock *BlockGraph::nextFlowAfter(const FlowBlock *bl) const
   return nextbl;
 }
 
-void BlockGraph::orderSwitchCases(void) const
+void BlockGraph::finalizePrinting(const Funcdata &data) const
 
 {
+  // Recurse into all the substructures
   vector<FlowBlock *>::const_iterator iter;
   for(iter=list.begin();iter!=list.end();++iter)
-    (*iter)->orderSwitchCases();
+    (*iter)->finalizePrinting(data);
 }
 
 void BlockGraph::saveXmlBody(ostream &s) const
@@ -1716,8 +1793,9 @@ BlockInfLoop *BlockGraph::newBlockInfLoop(FlowBlock *body)
 
 /// Add the new BlockSwitch to \b this, collapsing all the case FlowBlocks into it.
 /// \param cs is the list of case FlowBlocks
+/// \param hasExit is \b true if the switch has a formal exit
 /// \return the new BlockSwitch
-BlockSwitch *BlockGraph::newBlockSwitch(const vector<FlowBlock *> &cs)
+BlockSwitch *BlockGraph::newBlockSwitch(const vector<FlowBlock *> &cs,bool hasExit)
 
 {
   FlowBlock *rootbl = cs[0];
@@ -1728,6 +1806,8 @@ BlockSwitch *BlockGraph::newBlockSwitch(const vector<FlowBlock *> &cs)
   ret->grabCaseBasic(leafbl->subBlock(0),cs); // Must be called before the identifyInternal
   identifyInternal(ret,cs);
   addBlock(ret);
+  if (hasExit)
+    ret->forceOutputNum(1);	// If there is an exit, there should be exactly 1 out edge
   ret->clearFlag(f_switch_out);	// Don't consider this as being a switch "out"
   return ret;
 }
@@ -3003,9 +3083,12 @@ void BlockSwitch::grabCaseBasic(FlowBlock *switchbl,const vector<FlowBlock *> &c
   }
 }
 
-void BlockSwitch::orderSwitchCases(void) const
+void BlockSwitch::finalizePrinting(const Funcdata &data) const
 
 {
+  BlockGraph::finalizePrinting(data);	// Make sure to still recurse
+  // We need to order the cases based on the label
+  // First populate the label and depth fields of the CaseOrder objects
   for(int4 i=0;i<caseblocks.size();++i) { // Construct the depth parameter, to sort fall-thru cases
     CaseOrder &curcase( caseblocks[i] );
     int4 j = curcase.chain;
@@ -3034,7 +3117,7 @@ void BlockSwitch::orderSwitchCases(void) const
     else
       curcase.label = 0;	// Should never happen
   }
-  // Order case statements based on case labels
+  // Do actual sort of the cases based on label
   stable_sort(caseblocks.begin(),caseblocks.end(),CaseOrder::compare);
 }
 

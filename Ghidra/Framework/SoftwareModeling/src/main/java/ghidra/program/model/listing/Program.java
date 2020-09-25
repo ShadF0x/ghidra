@@ -102,7 +102,7 @@ public interface Program extends DataTypeManagerDomainObject {
 	public SymbolTable getSymbolTable();
 
 	/**
-
+	
 	 * Returns the external manager.
 	 */
 	public ExternalManager getExternalManager();
@@ -191,10 +191,21 @@ public interface Program extends DataTypeManagerDomainObject {
 	public void setExecutableMD5(String md5);
 
 	/**
+	 * Sets the value corresponding to the original binary file SHA256 hash.
+	 * @param sha256 SHA256 binary file hash
+	 */
+	public void setExecutableSHA256(String sha256);
+
+	/**
+	 * Returns a value corresponding to the original binary file SHA256 hash.
+	 * May be null if program source did not correspond to a binary file.
+	 */
+	public String getExecutableSHA256();
+
+	/**
 	 * Returns the creation date of this program.
 	 * If the program was created before this property
 	 * existed, then Jan 1, 1970 is returned.
-	 * @param program the prorgam 
 	 * @return the creation date of this program
 	 */
 	public Date getCreationDate();
@@ -320,8 +331,7 @@ public interface Program extends DataTypeManagerDomainObject {
 
 	/**
 	 * Returns the register which corresponds to the specified varnode
-	 * @param addr register address
-	 * @param size the size of the register (in bytes);
+	 * @param varnode the varnode
 	 * @return register or null
 	 */
 	public Register getRegister(Varnode varnode);
@@ -343,8 +353,8 @@ public interface Program extends DataTypeManagerDomainObject {
 	 * This will never be thrown if commit is false.
 	 * @throws IllegalStateException if the program state is not suitable for setting the image base.
 	 */
-	public void setImageBase(Address base, boolean commit) throws AddressOverflowException,
-			LockException, IllegalStateException;
+	public void setImageBase(Address base, boolean commit)
+			throws AddressOverflowException, LockException, IllegalStateException;
 
 	/**
 	 * Restores the last committed image base.
@@ -365,8 +375,8 @@ public interface Program extends DataTypeManagerDomainObject {
 	 * @throws LockException if the program is shared and not checked out exclusively.
 	 */
 	public void setLanguage(Language language, CompilerSpecID compilerSpecID,
-			boolean forceRedisassembly, TaskMonitor monitor) throws IllegalStateException,
-			IncompatibleLanguageException, LockException;
+			boolean forceRedisassembly, TaskMonitor monitor)
+			throws IllegalStateException, IncompatibleLanguageException, LockException;
 
 	/**
 	 * Returns the global namespace for this program
